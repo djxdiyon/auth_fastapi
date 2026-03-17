@@ -68,3 +68,30 @@ def get_me(
         raise HTTPException(status_code=404, detail="User not found")
 
     return user
+
+@router.get("/admin")
+def admin_only(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: Session = Depends(get_db),
+):
+    token = credentials.credentials
+
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        email = payload.get("sub")
+        role = payload.get("role")
+
+        if email is None:
+            raise HTTPException(status_code=401, detail="Invalid token")
+
+        if role != "admin":
+            raise HTTPException(status_code=403, detail="Admin access required")
+
+    except JWTError as exc:
+        raise HTTPException(status_code=401, detail="Invalid token") from exc
+
+    user = db.query(User).filter(User.email == email).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    return {"message": f"Welcome admin {user.username}"}
