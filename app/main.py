@@ -7,8 +7,7 @@ Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="FastAPI Auth API")
 
-app.include_router(users.router)
-
+app.include_router(users.router, prefix="/auth")
 
 @app.get("/")
 def root():
