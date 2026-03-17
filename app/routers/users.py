@@ -3,7 +3,14 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError, jwt
 from sqlalchemy.orm import Session
 
-from app.auth import ALGORITHM, SECRET_KEY, create_access_token, hash_password, verify_password
+from app.auth import (
+    ALGORITHM,
+    SECRET_KEY,
+    ADMIN_CREATION_KEY,
+    create_access_token,
+    hash_password,
+    verify_password,
+)
 from app.database import get_db
 from app.models import User
 from app.schemas import Token, UserCreate, UserLogin, UserResponse
@@ -22,17 +29,21 @@ def register(user_data: UserCreate, db: Session = Depends(get_db)):
     if existing_username:
         raise HTTPException(status_code=400, detail="Username already taken")
 
+    role = "user"
+    if user_data.admin_key and user_data.admin_key == ADMIN_CREATION_KEY:
+        role = "admin"
+
     user = User(
         email=user_data.email,
         username=user_data.username,
         hashed_password=hash_password(user_data.password),
+        role=role,
     )
 
     db.add(user)
     db.commit()
     db.refresh(user)
     return user
-
 
 @router.post("/login", response_model=Token)
 def login(user_data: UserLogin, db: Session = Depends(get_db)):
